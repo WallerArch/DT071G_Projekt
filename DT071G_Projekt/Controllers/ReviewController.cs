@@ -1,64 +1,42 @@
-﻿using DT071G_Projekt.Models;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using DT071G_Projekt.Models;
+using System.Collections.Generic;
 using System.Data.SQLite;
 
 namespace DT071G_Projekt.Controllers
 {
-
     public class ReviewController : Controller
     {
-        static List<RestaurantReview> restaurantReviews = new List<RestaurantReview>();
-        static string connectionString = "Data Source=RestaurantReviews.db;Version=3;";
-       
-        static void Main()
+        private readonly string connectionString = "Data Source=RestaurantReviews.db;Version=3;";
+        private static List<RestaurantReview> restaurantReviews = new List<RestaurantReview>();
+
+        public IActionResult Index()
         {
-            LoadReviews();
+            // Load reviews from the database
+            List<RestaurantReview> reviews = LoadReviews();
 
-            bool programRuns = true;
-
-            while (programRuns)
-            {
-                Console.Clear();
-                Console.WriteLine("Restaurant Review System:");
-                Console.WriteLine("1. Read all reviews");
-                Console.WriteLine("2. Read reviews by restaurant");
-                Console.WriteLine("3. Read reviews by chosen author");
-                Console.WriteLine("4. Write a new review");
-                Console.WriteLine("5. Delete a review");
-                Console.WriteLine("6. Exit");
-
-                int choice;
-                int.TryParse(Console.ReadLine(), out choice);
-
-                switch (choice)
-                {
-                    case 1:
-                        ReadReviews();
-                        break;
-                    case 2:
-                        ReadReviewsByRestaurant();
-                        break;
-                    case 3:
-                        ReadReviewsByAuthor();
-                        break;
-                    case 4:
-                        WriteReview();
-                        break;
-                    case 5:
-                        DeleteReview();
-                        break;
-                    case 6:
-                        SaveReviews();
-                        programRuns = false;
-                        break;
-                    default:
-                        break;
-                }
-            }
+            // Pass the reviews to the view
+            return View(reviews);
         }
 
-        static void LoadReviews()
+        public IActionResult Save()
         {
+            // Save reviews logic
+            SaveReviews();
+
+            // Redirect to the Index action to display the updated reviews
+            return RedirectToAction("Index");
+        }
+
+        public IActionResult WriteReview()
+        {
+            return View(); // Render the view for writing a review
+        }
+
+        private List<RestaurantReview> LoadReviews()
+        {
+            List<RestaurantReview> reviews = new List<RestaurantReview>();
+
             using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
@@ -78,15 +56,16 @@ namespace DT071G_Projekt.Controllers
                                 Restaurant = Convert.ToString(reader["Restaurant"]),
                             };
 
-                            restaurantReviews.Add(review);
+                            reviews.Add(review);
                         }
                     }
                 }
             }
 
+            return reviews;
         }
 
-        static void SaveReviews()
+        private void SaveReviews()
         {
             using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
@@ -97,7 +76,7 @@ namespace DT071G_Projekt.Controllers
                     foreach (var review in restaurantReviews)
                     {
                         using (SQLiteCommand insertCommand = new SQLiteCommand(
-                            "INSERT OR REPLACE INTO Reviews (Id, Review, Author, Restaurant, Sentiment) VALUES (@Id, @Review, @Author, @Restaurant, @Sentiment)",
+                            "INSERT OR REPLACE INTO Reviews (Id, Review, Author, Restaurant) VALUES (@Id, @Review, @Author, @Restaurant)",
                             connection, transaction))
                         {
                             insertCommand.Parameters.AddWithValue("@Id", review.Id);
@@ -114,9 +93,12 @@ namespace DT071G_Projekt.Controllers
             }
         }
 
+        // Other helper methods for different functionalities (e.g., DeleteReview) can go here
 
 
-        static void ReadReviews()
+
+
+        private void ReadReviews()
         {
             using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
@@ -138,7 +120,7 @@ namespace DT071G_Projekt.Controllers
                         {
                             while (reader.Read())
                             {
-                                Console.WriteLine($"{reader["Author"]} was at {reader["Restaurant"]} and says: {reader["Review"]} - Sentiment: {reader["Sentiment"]}");
+                                Console.WriteLine($"{reader["Author"]} was at {reader["Restaurant"]} and says: {reader["Review"]}");
                             }
                         }
                     }
@@ -149,7 +131,7 @@ namespace DT071G_Projekt.Controllers
             Console.ReadKey();
         }
 
-        static void ReadReviewsByRestaurant()
+        private void ReadReviewsByRestaurant()
         {
             using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
@@ -203,7 +185,7 @@ namespace DT071G_Projekt.Controllers
 
                                         while (reviewsReader.Read())
                                         {
-                                            Console.WriteLine($"{reviewsReader["Author"]} says: {reviewsReader["Review"]} - Sentiment: {reviewsReader["Sentiment"]}");
+                                            Console.WriteLine($"{reviewsReader["Author"]} says: {reviewsReader["Review"]}");
                                         }
                                     }
                                 }
@@ -226,7 +208,7 @@ namespace DT071G_Projekt.Controllers
             Console.ReadKey();
         }
 
-        static void ReadReviewsByAuthor()
+        private void ReadReviewsByAuthor()
         {
             using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
@@ -280,7 +262,7 @@ namespace DT071G_Projekt.Controllers
 
                                         while (reviewsReader.Read())
                                         {
-                                            Console.WriteLine($"{reviewsReader["Author"]} was at {reviewsReader["Restaurant"]} and says: {reviewsReader["Review"]} - Sentiment: {reviewsReader["Sentiment"]}");
+                                            Console.WriteLine($"{reviewsReader["Author"]} was at {reviewsReader["Restaurant"]} and says: {reviewsReader["Review"]}");
                                         }
                                     }
                                 }
@@ -303,29 +285,15 @@ namespace DT071G_Projekt.Controllers
             Console.ReadKey();
         }
 
-        static void WriteReview()
+        public IActionResult SubmitReview(string userReview, string userName, string reviewedRestaurant)
         {
-            Console.Clear();
-
-            Console.WriteLine("Write a new restaurant review:");
-
-            Console.WriteLine("Your review:");
-            string userReview = Console.ReadLine();
-
             if (!string.IsNullOrWhiteSpace(userReview))
             {
-           
-                Console.WriteLine("Your name:");
-                string userName = Console.ReadLine();
-
-                Console.WriteLine("Restaurant you visited:");
-                string reviewedRestaurant = Console.ReadLine();
-
                 using (SQLiteConnection connection = new SQLiteConnection(connectionString))
                 {
                     connection.Open();
 
-                    string insertQuery = "INSERT INTO Reviews (Review, Author, Restaurant, Sentiment) VALUES (@Review, @Author, @Restaurant, @Sentiment)";
+                    string insertQuery = "INSERT INTO Reviews (Review, Author, Restaurant) VALUES (@Review, @Author, @Restaurant)";
                     using (SQLiteCommand insertCommand = new SQLiteCommand(insertQuery, connection))
                     {
                         insertCommand.Parameters.AddWithValue("@Review", userReview);
@@ -336,17 +304,18 @@ namespace DT071G_Projekt.Controllers
                     }
                 }
 
-                Console.WriteLine("Review added successfully.");
-                Console.WriteLine("\nPress any key to write another review or press backspace to return to the main menu.\n");
+                TempData["SuccessMessage"] = "Review added successfully.";
             }
             else
             {
-                Console.WriteLine("Review cannot be empty. Please try again.");
-                Console.WriteLine("\nPress any key to write another review or press backspace to return to the main menu.\n");
+                TempData["ErrorMessage"] = "Review cannot be empty. Please try again.";
             }
+
+            // Redirect back to the WriteReview page
+            return RedirectToAction("WriteReview");
         }
 
-        static void DeleteReview()
+        private void DeleteReview()
         {
             using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
