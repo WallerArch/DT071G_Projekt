@@ -1,0 +1,23 @@
+﻿@model List<string>
+
+<h2>Choose an author to view reviews:</h2>
+
+@if (Model.Count == 0)
+{
+    <p>No authors available.</p>
+}
+else
+{
+    <ul>
+        @for (int i = 0; i < Model.Count; i++)
+        {
+            <li>
+                <a asp-controller="Review" asp-action="DisplayReviewsByAuthor" asp-route-author="@Model[i]">@Model[i]</a>
+            </li>
+        }
+    </ul>
+}
+
+<p>
+    <a asp-controller="Home" asp-action="Index">Back to Home</a>
+</p>

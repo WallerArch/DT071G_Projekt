@@ -32,6 +32,37 @@ namespace DT071G_Projekt.Controllers
         {
             return View(); // Render the view for writing a review
         }
+        public IActionResult ReviewsByRestaurant()
+        {
+            List<string> uniqueRestaurants = GetUniqueRestaurants();
+
+            return View(uniqueRestaurants);
+        }
+
+        public IActionResult DisplayReviewsByRestaurant(string restaurant)
+        {
+            List<RestaurantReview> reviews = GetReviewsByRestaurant(restaurant);
+
+            ViewData["Restaurant"] = restaurant;
+
+            return View(reviews);
+        }
+
+        public IActionResult ReviewsByAuthor()
+        {
+            List<string> uniqueAuthors = GetUniqueAuthors();
+
+            return View(uniqueAuthors);
+        }
+
+        public IActionResult DisplayReviewsByAuthor(string author)
+        {
+            List<RestaurantReview> reviews = GetReviewsByAuthor(author);
+
+            ViewData["Author"] = author;
+
+            return View(reviews);
+        }
 
         private List<RestaurantReview> LoadReviews()
         {
@@ -131,158 +162,119 @@ namespace DT071G_Projekt.Controllers
             Console.ReadKey();
         }
 
-        private void ReadReviewsByRestaurant()
+        private List<string> GetUniqueRestaurants()
         {
+            List<string> uniqueRestaurants = new List<string>();
+
             using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
 
                 string query = "SELECT DISTINCT Restaurant FROM Reviews";
+
                 using (SQLiteCommand command = new SQLiteCommand(query, connection))
                 {
                     using (SQLiteDataReader reader = command.ExecuteReader())
                     {
-                        Console.Clear();
-                        Console.WriteLine("Choose a restaurant to view reviews:");
-
-                        if (!reader.HasRows)
+                        while (reader.Read())
                         {
-                            Console.WriteLine("\nNo restaurants available.");
-                        }
-                        else
-                        {
-                            List<string> uniqueRestaurants = new List<string>();
-
-                            while (reader.Read())
-                            {
-                                uniqueRestaurants.Add(reader["Restaurant"].ToString());
-                            }
-
-                            // Display numbered list of unique restaurants
-                            for (int i = 0; i < uniqueRestaurants.Count; i++)
-                            {
-                                Console.WriteLine($"{i + 1}. {uniqueRestaurants[i]}");
-                            }
-
-                            // Prompt user to choose a restaurant
-                            Console.Write("\nEnter the number of the restaurant to view reviews (or press 'B' to go back): ");
-                            string userInput = Console.ReadLine();
-
-                            if (int.TryParse(userInput, out int choice) && choice >= 1 && choice <= uniqueRestaurants.Count)
-                            {
-                                string chosenRestaurant = uniqueRestaurants[choice - 1];
-
-                                // Get reviews for the chosen restaurant
-                                string reviewsQuery = $"SELECT * FROM Reviews WHERE Restaurant = @Restaurant";
-                                using (SQLiteCommand reviewsCommand = new SQLiteCommand(reviewsQuery, connection))
-                                {
-                                    reviewsCommand.Parameters.AddWithValue("@Restaurant", chosenRestaurant);
-
-                                    using (SQLiteDataReader reviewsReader = reviewsCommand.ExecuteReader())
-                                    {
-                                        Console.Clear();
-                                        Console.WriteLine($"Reviews for {chosenRestaurant}:");
-
-                                        while (reviewsReader.Read())
-                                        {
-                                            Console.WriteLine($"{reviewsReader["Author"]} says: {reviewsReader["Review"]}");
-                                        }
-                                    }
-                                }
-                            }
-                            else if (userInput.Equals("B", StringComparison.OrdinalIgnoreCase))
-                            {
-                                // User chose to go back
-                                return;
-                            }
-                            else
-                            {
-                                Console.WriteLine("Invalid choice. Please enter a valid number.");
-                            }
+                            uniqueRestaurants.Add(reader["Restaurant"].ToString());
                         }
                     }
                 }
             }
 
-            Console.WriteLine("\nPress any key to return.");
-            Console.ReadKey();
+            return uniqueRestaurants;
         }
 
-        private void ReadReviewsByAuthor()
+        private List<RestaurantReview> GetReviewsByRestaurant(string restaurant)
         {
+            List<RestaurantReview> reviews = new List<RestaurantReview>();
+
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
+            {
+                connection.Open();
+
+                string query = "SELECT * FROM Reviews WHERE Restaurant = @Restaurant";
+
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@Restaurant", restaurant);
+
+                    using (SQLiteDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            reviews.Add(new RestaurantReview
+                            {
+                                Author = reader["Author"].ToString(),
+                                Review = reader["Review"].ToString()
+                                // Add other properties as needed
+                            });
+                        }
+                    }
+                }
+            }
+
+            return reviews;
+        }
+
+        private List<string> GetUniqueAuthors()
+        {
+            List<string> uniqueAuthors = new List<string>();
+
             using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
 
                 string query = "SELECT DISTINCT Author FROM Reviews";
+
                 using (SQLiteCommand command = new SQLiteCommand(query, connection))
                 {
                     using (SQLiteDataReader reader = command.ExecuteReader())
                     {
-                        Console.Clear();
-                        Console.WriteLine("Choose an author to view reviews:");
-
-                        if (!reader.HasRows)
+                        while (reader.Read())
                         {
-                            Console.WriteLine("\nNo authors available.");
-                        }
-                        else
-                        {
-                            List<string> uniqueAuthors = new List<string>();
-
-                            while (reader.Read())
-                            {
-                                uniqueAuthors.Add(reader["Author"].ToString());
-                            }
-
-                            // Display numbered list of unique authors
-                            for (int i = 0; i < uniqueAuthors.Count; i++)
-                            {
-                                Console.WriteLine($"{i + 1}. {uniqueAuthors[i]}");
-                            }
-
-                            // Prompt user to choose an author
-                            Console.Write("\nEnter the number of the author to view reviews (or press 'B' to go back): ");
-                            string userInput = Console.ReadLine();
-
-                            if (int.TryParse(userInput, out int choice) && choice >= 1 && choice <= uniqueAuthors.Count)
-                            {
-                                string chosenAuthor = uniqueAuthors[choice - 1];
-
-                                // Get reviews for the chosen author
-                                string reviewsQuery = $"SELECT * FROM Reviews WHERE Author = @Author";
-                                using (SQLiteCommand reviewsCommand = new SQLiteCommand(reviewsQuery, connection))
-                                {
-                                    reviewsCommand.Parameters.AddWithValue("@Author", chosenAuthor);
-
-                                    using (SQLiteDataReader reviewsReader = reviewsCommand.ExecuteReader())
-                                    {
-                                        Console.Clear();
-                                        Console.WriteLine($"Reviews by {chosenAuthor}:");
-
-                                        while (reviewsReader.Read())
-                                        {
-                                            Console.WriteLine($"{reviewsReader["Author"]} was at {reviewsReader["Restaurant"]} and says: {reviewsReader["Review"]}");
-                                        }
-                                    }
-                                }
-                            }
-                            else if (userInput.Equals("B", StringComparison.OrdinalIgnoreCase))
-                            {
-                                // User chose to go back
-                                return;
-                            }
-                            else
-                            {
-                                Console.WriteLine("Invalid choice. Please enter a valid number.");
-                            }
+                            uniqueAuthors.Add(reader["Author"].ToString());
                         }
                     }
                 }
             }
 
-            Console.WriteLine("\nPress any key to return.");
-            Console.ReadKey();
+            return uniqueAuthors;
+        }
+
+        private List<RestaurantReview> GetReviewsByAuthor(string author)
+        {
+            List<RestaurantReview> reviews = new List<RestaurantReview>();
+
+            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
+            {
+                connection.Open();
+
+                string query = "SELECT * FROM Reviews WHERE Author = @Author";
+
+                using (SQLiteCommand command = new SQLiteCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@Author", author);
+
+                    using (SQLiteDataReader reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            reviews.Add(new RestaurantReview
+                            {
+                                Author = reader["Author"].ToString(),
+                                Restaurant = reader["Restaurant"].ToString(),
+                                Review = reader["Review"].ToString()
+                                // Add other properties as needed
+                            });
+                        }
+                    }
+                }
+            }
+
+            return reviews;
         }
 
         public IActionResult SubmitReview(string userReview, string userName, string reviewedRestaurant)
