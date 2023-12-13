@@ -25,16 +25,16 @@
 
 <form method="post" action="@Url.Action("SubmitReview")">
     <div>
-        <label for="userReview">Your review:</label>
+        <label for="userReview">Your review:</label> <br />
         <textarea id="userReview" name="userReview" required></textarea>
     </div>
     <div>
-        <label for="userName">Your name:</label>
+        <label for="userName">Your name:</label><br />
         <input type="text" id="userName" name="userName" required>
     </div>
     <div>
-        <label for="reviewedRestaurant">Restaurant you visited:</label>
+        <label for="reviewedRestaurant">Restaurant you visited:</label><br />
         <input type="text" id="reviewedRestaurant" name="reviewedRestaurant" required>
-    </div>
+    </div> <br />
     <button type="submit">Submit Review</button>
 </form>
