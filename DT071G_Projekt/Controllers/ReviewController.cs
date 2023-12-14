@@ -1,72 +1,97 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using DT071G_Projekt.Models;
-using System.Collections.Generic;
 using System.Data.SQLite;
 
 namespace DT071G_Projekt.Controllers
 {
     public class ReviewController : Controller
     {
+        // Variabel för databasuppkoppling
         private readonly string connectionString = "Data Source=RestaurantReviews.db;Version=3;";
+        // Lista som recenserionerna lagras i
         private static List<RestaurantReview> restaurantReviews = new List<RestaurantReview>();
 
+        /*------------------------------------------------------------------------Returer till vyer---------------------------------------------------------------------------------*/
         public IActionResult Index()
         {
-            // Load reviews from the database
-            List<RestaurantReview> reviews = LoadReviews();
+            restaurantReviews = LoadReviews(); // Hämtar recensionerna från databasen och lägger de i en lista
 
-            // Pass the reviews to the view
-            return View(reviews);
+            return View(restaurantReviews); // Lägger listan recensionerna till Vyn som returneras
+
         }
-
-        public IActionResult Save()
-        {
-            // Save reviews logic
-            SaveReviews();
-
-            // Redirect to the Index action to display the updated reviews
-            return RedirectToAction("Index");
-        }
-
         public IActionResult WriteReview()
         {
-            return View(); // Render the view for writing a review
+            return View(); // Renderar vyn för att skriva en ny recension
         }
         public IActionResult ReviewsByRestaurant()
         {
-            List<string> uniqueRestaurants = GetUniqueRestaurants();
+            List<string> uniqueRestaurants = GetUniqueRestaurants(); //Använder funktionen som hämtar ut alla restauranger och lägger de i en lista
 
-            return View(uniqueRestaurants);
+            return View(uniqueRestaurants); // Renderar vyn med alla restauranger
         }
 
-        public IActionResult DisplayReviewsByRestaurant(string restaurant)
+        public IActionResult DisplayReviewsByRestaurant(string restaurant) 
         {
-            List<RestaurantReview> reviews = GetReviewsByRestaurant(restaurant);
+            restaurantReviews = GetReviewsByRestaurant(restaurant);  // Lägger alla recensionerna från vald restaurang i listan
 
-            ViewData["Restaurant"] = restaurant;
+            ViewData["Restaurant"] = restaurant; // Anger att det är just den valda restaurangen som är argument till funktionen
 
-            return View(reviews);
+            return View(restaurantReviews); // Renderar vyn med recensioner för vald restaurang
         }
 
         public IActionResult ReviewsByAuthor()
         {
-            List<string> uniqueAuthors = GetUniqueAuthors();
+            List<string> uniqueAuthors = GetUniqueAuthors(); // Lägger alla recensenterna i en lista
 
-            return View(uniqueAuthors);
+            return View(uniqueAuthors); // Renderar vyn med alla skribenter
         }
 
         public IActionResult DisplayReviewsByAuthor(string author)
         {
-            List<RestaurantReview> reviews = GetReviewsByAuthor(author);
+            restaurantReviews = GetReviewsByAuthor(author);   // Lägger alla recensionerna från vald skribententen i listan
 
-            ViewData["Author"] = author;
+            ViewData["Author"] = author; // Anger att det är just den valda skribententen som är argument till funktionen
 
-            return View(reviews);
+            return View(restaurantReviews); // Renderar vyn med recensioner för vald skribent
         }
 
+        public IActionResult SubmitReview(string userReview, string userName, string reviewedRestaurant) // Funktionen som lägger till ny recension i databasen
+        {
+            if (!string.IsNullOrWhiteSpace(userReview))
+            {
+                using (SQLiteConnection connection = new SQLiteConnection(connectionString))
+                {
+                    connection.Open();
+
+                    string insertQuery = "INSERT INTO Reviews (Review, Author, Restaurant) VALUES (@Review, @Author, @Restaurant)"; // SQL frågan som skickar in det till databasen
+                    using (SQLiteCommand insertCommand = new SQLiteCommand(insertQuery, connection))
+                    {
+                        insertCommand.Parameters.AddWithValue("@Review", userReview);
+                        insertCommand.Parameters.AddWithValue("@Author", userName);
+                        insertCommand.Parameters.AddWithValue("@Restaurant", reviewedRestaurant);
+
+                        insertCommand.ExecuteNonQuery();
+                    }
+                }
+
+                TempData["SuccessMessage"] = "Review added successfully."; // Bekräftelse-meddelande
+            }
+            else
+            {
+                TempData["ErrorMessage"] = "Review cannot be empty. Please try again."; // Om skribenten försöker skicka in en tom recension skrivs denna feltext ut
+            }
+            return RedirectToAction("WriteReview");
+        }
+
+        /*--------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
+
+        /*------------------------------------------ Funktioner/listor vars returer skickas av deras respektive IAction ovan till respektive vy -------------------------------------*/
+
+
+        // Funktion/Lista som laddar/hämtar alla recensioner
         private List<RestaurantReview> LoadReviews()
         {
-            List<RestaurantReview> reviews = new List<RestaurantReview>();
+            List<RestaurantReview> reviews = new List<RestaurantReview>(); // Lista som recensionerna senare läggs i
 
             using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
@@ -79,7 +104,7 @@ namespace DT071G_Projekt.Controllers
                     {
                         while (reader.Read())
                         {
-                            RestaurantReview review = new RestaurantReview
+                            RestaurantReview review = new RestaurantReview // Skapar en ny instans av listan
                             {
                                 Id = Convert.ToInt32(reader["Id"]),
                                 Review = Convert.ToString(reader["Review"]),
@@ -87,7 +112,7 @@ namespace DT071G_Projekt.Controllers
                                 Restaurant = Convert.ToString(reader["Restaurant"]),
                             };
 
-                            reviews.Add(review);
+                            reviews.Add(review); // Lägger de hämtade recensionerna till listan
                         }
                     }
                 }
@@ -96,72 +121,9 @@ namespace DT071G_Projekt.Controllers
             return reviews;
         }
 
-        private void SaveReviews()
-        {
-            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
-            {
-                connection.Open();
+      
 
-                using (var transaction = connection.BeginTransaction())
-                {
-                    foreach (var review in restaurantReviews)
-                    {
-                        using (SQLiteCommand insertCommand = new SQLiteCommand(
-                            "INSERT OR REPLACE INTO Reviews (Id, Review, Author, Restaurant) VALUES (@Id, @Review, @Author, @Restaurant)",
-                            connection, transaction))
-                        {
-                            insertCommand.Parameters.AddWithValue("@Id", review.Id);
-                            insertCommand.Parameters.AddWithValue("@Review", review.Review);
-                            insertCommand.Parameters.AddWithValue("@Author", review.Author);
-                            insertCommand.Parameters.AddWithValue("@Restaurant", review.Restaurant);
-
-                            insertCommand.ExecuteNonQuery();
-                        }
-                    }
-
-                    transaction.Commit();
-                }
-            }
-        }
-
-        // Other helper methods for different functionalities (e.g., DeleteReview) can go here
-
-
-
-
-        private void ReadReviews()
-        {
-            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
-            {
-                connection.Open();
-
-                string query = "SELECT * FROM Reviews";
-                using (SQLiteCommand command = new SQLiteCommand(query, connection))
-                {
-                    using (SQLiteDataReader reader = command.ExecuteReader())
-                    {
-                        Console.Clear();
-                        Console.WriteLine("Restaurant Reviews:");
-
-                        if (!reader.HasRows)
-                        {
-                            Console.WriteLine("\nNo reviews available.");
-                        }
-                        else
-                        {
-                            while (reader.Read())
-                            {
-                                Console.WriteLine($"{reader["Author"]} was at {reader["Restaurant"]} and says: {reader["Review"]}");
-                            }
-                        }
-                    }
-                }
-            }
-
-            Console.WriteLine("\nPress any key to return.");
-            Console.ReadKey();
-        }
-
+        // Funktion/Lista för att hämta ut lista med alla restaurangerna som finns i tabellen för alla recensioner
         private List<string> GetUniqueRestaurants()
         {
             List<string> uniqueRestaurants = new List<string>();
@@ -187,6 +149,7 @@ namespace DT071G_Projekt.Controllers
             return uniqueRestaurants;
         }
 
+        // Funktion/Lista för att hämta ut alla recensioner för en vald restaurang
         private List<RestaurantReview> GetReviewsByRestaurant(string restaurant)
         {
             List<RestaurantReview> reviews = new List<RestaurantReview>();
@@ -209,7 +172,6 @@ namespace DT071G_Projekt.Controllers
                             {
                                 Author = reader["Author"].ToString(),
                                 Review = reader["Review"].ToString()
-                                // Add other properties as needed
                             });
                         }
                     }
@@ -218,16 +180,16 @@ namespace DT071G_Projekt.Controllers
 
             return reviews;
         }
-
+        // Funktion/Lista för att hämta ut lista med alla skribenterna som finns i tabellen för alla recensioner
         private List<string> GetUniqueAuthors()
         {
-            List<string> uniqueAuthors = new List<string>();
+            List<string> uniqueAuthors = new List<string>(); // Skapar listan som skribenterna läggs i
 
             using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
 
-                string query = "SELECT DISTINCT Author FROM Reviews";
+                string query = "SELECT DISTINCT Author FROM Reviews"; // SQL frågan som hämtar ut alla skribenterna
 
                 using (SQLiteCommand command = new SQLiteCommand(query, connection))
                 {
@@ -235,24 +197,25 @@ namespace DT071G_Projekt.Controllers
                     {
                         while (reader.Read())
                         {
-                            uniqueAuthors.Add(reader["Author"].ToString());
+                            uniqueAuthors.Add(reader["Author"].ToString()); // Lägger till alla skribenter som finns i listan
                         }
                     }
                 }
             }
 
-            return uniqueAuthors;
+            return uniqueAuthors; // Returnerar listan med skribenterna
         }
 
+        // Funktion/Lista för att hämta ut alla recensioner för en vald skribent
         private List<RestaurantReview> GetReviewsByAuthor(string author)
         {
-            List<RestaurantReview> reviews = new List<RestaurantReview>();
+            List<RestaurantReview> reviews = new List<RestaurantReview>(); // Skapar listan som den valda skribentens recensioner läggs i
 
             using (SQLiteConnection connection = new SQLiteConnection(connectionString))
             {
                 connection.Open();
 
-                string query = "SELECT * FROM Reviews WHERE Author = @Author";
+                string query = "SELECT * FROM Reviews WHERE Author = @Author"; // SQL som hämtar ut endast alla recensioner där skribenten är densamma som den valda skribenten
 
                 using (SQLiteCommand command = new SQLiteCommand(query, connection))
                 {
@@ -262,124 +225,18 @@ namespace DT071G_Projekt.Controllers
                     {
                         while (reader.Read())
                         {
-                            reviews.Add(new RestaurantReview
+                            reviews.Add(new RestaurantReview // Lägger till recenionerna från denna skribent till listan
                             {
                                 Author = reader["Author"].ToString(),
                                 Restaurant = reader["Restaurant"].ToString(),
                                 Review = reader["Review"].ToString()
-                                // Add other properties as needed
                             });
                         }
                     }
                 }
             }
-
             return reviews;
         }
-
-        public IActionResult SubmitReview(string userReview, string userName, string reviewedRestaurant)
-        {
-            if (!string.IsNullOrWhiteSpace(userReview))
-            {
-                using (SQLiteConnection connection = new SQLiteConnection(connectionString))
-                {
-                    connection.Open();
-
-                    string insertQuery = "INSERT INTO Reviews (Review, Author, Restaurant) VALUES (@Review, @Author, @Restaurant)";
-                    using (SQLiteCommand insertCommand = new SQLiteCommand(insertQuery, connection))
-                    {
-                        insertCommand.Parameters.AddWithValue("@Review", userReview);
-                        insertCommand.Parameters.AddWithValue("@Author", userName);
-                        insertCommand.Parameters.AddWithValue("@Restaurant", reviewedRestaurant);
-
-                        insertCommand.ExecuteNonQuery();
-                    }
-                }
-
-                TempData["SuccessMessage"] = "Review added successfully.";
-            }
-            else
-            {
-                TempData["ErrorMessage"] = "Review cannot be empty. Please try again.";
-            }
-
-            // Redirect back to the WriteReview page
-            return RedirectToAction("WriteReview");
-        }
-
-        private void DeleteReview()
-        {
-            using (SQLiteConnection connection = new SQLiteConnection(connectionString))
-            {
-                connection.Open();
-
-                string selectQuery = "SELECT * FROM Reviews";
-                using (SQLiteCommand selectCommand = new SQLiteCommand(selectQuery, connection))
-                {
-                    using (SQLiteDataReader reader = selectCommand.ExecuteReader())
-                    {
-                        if (!reader.HasRows)
-                        {
-                            Console.Clear();
-                            Console.WriteLine("No reviews available.\n");
-                            Console.WriteLine("Press any key to return.");
-                            Console.ReadKey();
-                            return;
-                        }
-                    }
-                }
-
-                do
-                {
-                    Console.Clear();
-                    Console.WriteLine("Delete a restaurant review:");
-
-                    List<RestaurantReview> reviewsFromDatabase = new List<RestaurantReview>();
-                    using (SQLiteCommand selectCommand = new SQLiteCommand(selectQuery, connection))
-                    {
-                        using (SQLiteDataReader reader = selectCommand.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                reviewsFromDatabase.Add(new RestaurantReview
-                                {
-                                    Id = Convert.ToInt32(reader["Id"]),
-                                    Review = reader["Review"].ToString(),
-                                    Author = reader["Author"].ToString(),
-                                    Restaurant = reader["Restaurant"].ToString(),
-                                });
-                            }
-                        }
-                    }
-
-                    for (int i = 0; i < reviewsFromDatabase.Count; i++)
-                    {
-                        Console.WriteLine($"{i + 1}. {reviewsFromDatabase[i].Restaurant}, {reviewsFromDatabase[i].Review} - By: {reviewsFromDatabase[i].Author}");
-                    }
-
-                    Console.Write("Enter the number of the review you want to delete:\n");
-
-                    if (int.TryParse(Console.ReadLine(), out int reviewNumber) && reviewNumber >= 1 && reviewNumber <= reviewsFromDatabase.Count)
-                    {
-                        int reviewIdToDelete = reviewsFromDatabase[reviewNumber - 1].Id;
-
-                        string deleteQuery = "DELETE FROM Reviews WHERE Id = @ReviewId";
-                        using (SQLiteCommand deleteCommand = new SQLiteCommand(deleteQuery, connection))
-                        {
-                            deleteCommand.Parameters.AddWithValue("@ReviewId", reviewIdToDelete);
-                            deleteCommand.ExecuteNonQuery();
-                        }
-
-                        Console.WriteLine("\nReview deleted successfully.\n");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Invalid choice. Please enter a valid number.\n");
-                    }
-
-                    Console.WriteLine("Press any key to enter a number again or press backspace to return to the main menu.\n");
-                } while (Console.ReadKey(true).Key != ConsoleKey.Backspace);
-            }
-        }
+        /*--------------------------------------------------------------------------------------------------------------------------------------------------------------------------*/
     }
 }
