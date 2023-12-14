@@ -1,4 +1,4 @@
-﻿@model List<DT071G_Projekt.Models.RestaurantReview>
+﻿@model List<DT071G_Projekt.Models.RestaurantReview> // Hämtar modellen för listan som skrivs ut nedan till skärmen
 
 @{
     ViewData["Title"] = "Reviews for " + ViewData["Restaurant"];
@@ -13,7 +13,7 @@
 else
 {
     <ul>
-        @foreach (var review in Model)
+        @foreach (var review in Model)  // Här loopas alla restaurangens recensioner igenom och skrivs nedan ut till skärmen
         {
             <li>
                 <strong>@review.Author:</strong> @review.Review
