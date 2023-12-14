@@ -12,7 +12,7 @@ namespace DT071G_Projekt.Controllers
         private static List<RestaurantReview> restaurantReviews = new List<RestaurantReview>();
 
         /*------------------------------------------------------------------------Returer till vyer---------------------------------------------------------------------------------*/
-        public IActionResult Index()
+        public IActionResult AllReviews()
         {
             restaurantReviews = LoadReviews(); // Hämtar recensionerna från databasen och lägger de i en lista
 
