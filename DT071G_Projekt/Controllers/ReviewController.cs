@@ -87,7 +87,6 @@ namespace DT071G_Projekt.Controllers
 
         /*------------------------------------------ Funktioner/listor vars returer skickas av deras respektive IAction ovan till respektive vy -------------------------------------*/
 
-
         // Funktion/Lista som laddar/hämtar alla recensioner
         private List<RestaurantReview> LoadReviews()
         {
@@ -117,11 +116,8 @@ namespace DT071G_Projekt.Controllers
                     }
                 }
             }
-
             return reviews;
         }
-
-      
 
         // Funktion/Lista för att hämta ut lista med alla restaurangerna som finns i tabellen för alla recensioner
         private List<string> GetUniqueRestaurants()
@@ -145,7 +141,6 @@ namespace DT071G_Projekt.Controllers
                     }
                 }
             }
-
             return uniqueRestaurants;
         }
 
@@ -177,9 +172,9 @@ namespace DT071G_Projekt.Controllers
                     }
                 }
             }
-
             return reviews;
         }
+
         // Funktion/Lista för att hämta ut lista med alla skribenterna som finns i tabellen för alla recensioner
         private List<string> GetUniqueAuthors()
         {
